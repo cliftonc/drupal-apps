@@ -1,0 +1,12 @@
+#appFrame {
+	height: 500px;
+}
+
+.composite-child {
+	float: left; 
+	width:100%; 
+	height: 100%; 
+	margin: 0px; 
+	border: none; 
+	overflow:auto;
+}

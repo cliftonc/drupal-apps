@@ -1,0 +1,210 @@
+<?php
+// $Id: apps_sdk.module,v 0.1 2010/11/29 ccunningham $
+
+/**
+ * @file
+ * apps_sdk.module
+ */
+
+  function apps_sdk_menu() { 
+    
+    $items = array();
+
+    $items['admin/build/apps'] = array(
+    'title' => t('Apps'),
+    'page callback' => 'apps_sdk_admin_list',    
+    'access arguments' => array('administer apps'),    
+    'description' => 'Manage the linked apps via the Apps SDK.',        
+      'file' => 'apps_sdk.admin.inc'
+    );
+    
+    $items['admin/build/apps/list'] = array(
+      'title' => 'List',
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+    );
+
+      
+    $items['admin/build/apps/%apps_apps/edit'] = array(
+    'title' => 'Edit',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('apps_sdk_admin', 3),
+    'access arguments' => array('administer apps'),
+    'file' => 'apps_sdk.admin.inc',
+    );
+    
+    $items['admin/build/apps/add'] = array(
+    'title' => 'Add App',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 2,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('apps_sdk_admin'),
+    'access arguments' => array('administer apps'),
+    'file' => 'apps_sdk.admin.inc',
+    );    
+    
+    $items['apps'] = array(
+    'title' => t('Apps'),
+    'page callback' => 'apps_sdk_list',
+    'page arguments' => array(1),
+    'access arguments' => array('access apps'),    
+    'access callback' => TRUE,
+    'description' => 'List the Apps configured for this site.',
+    'expanded' => TRUE
+    );    
+  
+  
+    $sql = 'SELECT appid, appkey, name, url, css,status FROM {apps_apps} WHERE status = 1';          
+    $result = db_query($sql);    
+    while ($app = db_fetch_object($result)) {    
+    
+      $rows[] = array($app->appid, $app->name, $app->url, $app->css, $app->status);      
+
+      $items['apps/' . $app->name] = array(
+      'title' => $app->name,    
+      'page callback' => 'apps_sdk_open_app',        
+      'page arguments' => array($app->appkey, $app->name, $app->url, $app->css),
+      'access arguments' => array('access apps'),    
+      'access callback' => TRUE
+      );    
+    
+    }
+
+    $items['apps/user'] = array(
+     'title' => t('User'),
+     'page callback' => 'apps_sdk_json_user',
+     'page arguments' => array(1),
+     'access arguments' => array('access apps'),
+     'access callback' => TRUE,
+     'description' => 'User as JSON.',
+     'expanded' => TRUE
+    );
+
+    
+    return $items;
+
+  }
+  
+  function apps_sdk_json_user() {
+	print drupal_to_js($GLOBALS['user']);
+  	exit();
+	//return false;	
+  } 
+
+  /**
+   * Apps list - non administrative
+   */
+  function apps_sdk_list($name) {
+  
+    $sql = 'SELECT name, url FROM {apps_apps} WHERE status = 1';          
+    
+    $result = db_query($sql);    
+    while ($app = db_fetch_object($result)) {    
+      $rows[] = array('<a href="apps/' . $app->name . '">' . $app->name. '</a>', $app->url);      
+    }    
+    
+    $header = array(    
+      array('data' => t('Name'), 'field' => 'name'),
+      array('data' => t('URL'), 'field' => 'url')
+    );
+    
+    
+    if ( count($rows) ) {
+          $output = theme('table', $header, $rows);
+    } 
+    else {
+        $output = "There are currently no apps!";
+    }
+    
+    $output = $output . " 
+      <br/>
+      <h2>Overview of the Drupal Apps SDK</h2>
+      <p>The APPS SDK is a very simple implementation of a facebook style apps framework, with the only difference being that it is up to the site 
+      administrator to configure the applications rather than the users (though this user driven model is eminently possible if anyone wants to take up the mantle!).
+       </p>
+      <p>
+        It works as follows:
+          <ol>
+            <li>Install the Apps SDK Module in your drupal site, download from <a href=\"" . drupal_get_path('module', 'apps_sdk') .'/apps_sdk.module.zip' . "\">here</a>.</li>
+            <li>Via the <a href=\"admin/build/apps\">administration</a> area, add a new app, with:
+                <ul>
+                    <li>Name: This appears in the navigation menu.</li>
+                    <li>Key: This is a shared key that must be used when configuring the app javascript SDK in later steps - note it down.</li>
+                    <li>URL: The base url of your application (this is the first page the iFrame links to).</li>
+                    <li>CSS: A CSS file that can be applied to the application, must be an absolute URL as it is passed through to the child app to over-ride its style.</li>
+                    <li>Status: Use to enable / disable apps.</li>
+                </ul>
+            </li>
+            <li>Download the Apps SDK from here: <a href=\"" . drupal_get_path('module', 'apps_sdk') .'/apps_sdk.zip' . "\">App Javascript SDK</a></li>
+            <li>Add the javascript folder to your application, and include it as per the example (child.html) in the zip.</li>
+            <li>Configure the initialisation parameters of the application (as per the example) to match your parent domain (e.g. the base url of your drupal site), and the key that was created earlier when you created the app.</li>
+            <li>The app should now work when clicked on.</li>            
+           </ol>           
+      </p>
+      <p>
+        You can now edit the composite.parent and composite.child javascript on both sides of the divide to implement shared functions, e.g. allow the child
+        to call javascript functions on the parent (e.g. to see user information) or vice versa.  In the example, clicking on the user name in the child application
+ 	 triggers a modal dialog that is defined in the parent to appear, passing information back to enable drupal to provide information on the user ... think employee lookup, 
+        presence detection, chat, etc. across all enterprise apps that you can stick the SDK into and have a key (email or username) that is common.
+      </p>
+      <p>
+        More detailed examples to follow ...
+      </p>
+    ";
+    
+    return $output;           
+    
+  }
+    
+  /**
+   * Menu callback, load an app.
+   */
+  function apps_apps_load($appid) {    
+    $app = db_fetch_object(db_query('SELECT appid, appkey, name, url, css,status FROM {apps_apps} WHERE appid = %d', $appid));    
+    return $app;
+  }
+  
+/**
+ * Implementation of hook_perm().
+ */
+  function apps_sdk_perm() {
+    $perm = array('administer apps', 'access apps');
+    return $perm;
+  }
+  
+  function apps_sdk_open_app($key, $title, $url, $css) {
+      
+    // Module styling
+    drupal_add_css(drupal_get_path('module', 'apps_sdk') .'/css/apps-sdk-style.css', 'module', 'all', FALSE);    
+    drupal_add_css(drupal_get_path('module', 'apps_sdk') .'/css/custom-theme/jquery-ui-1.8.6.custom.css', 'module', 'all', FALSE);    
+    
+    // JQuery UI & Post Message
+    drupal_add_js(drupal_get_path('module', 'apps_sdk') .'/js/jquery-1.4.2.js');  
+    drupal_add_js(drupal_get_path('module', 'apps_sdk') .'/js/jquery-ui-1.8.6.custom.min.js');        
+    drupal_add_js(drupal_get_path('module', 'apps_sdk') .'/js/postmessage.js');
+    
+    // Include the composite libraries in reverse order
+    drupal_add_js(drupal_get_path('module', 'apps_sdk') .'/js/composite/composite-default.js');    
+    drupal_add_js(drupal_get_path('module', 'apps_sdk') .'/js/composite/composite-parent-ui.js');    
+    drupal_add_js(drupal_get_path('module', 'apps_sdk') .'/js/composite/composite-parent.js');        
+    drupal_add_js(drupal_get_path('module', 'apps_sdk') .'/js/composite/composite.js');    
+    
+    global $base_url;       
+    $parent_url = str_replace("/drupal", "", $base_url);    
+    
+    $output = "<script>
+          $(function() {
+            $.composite({mode:\"parent\",domain:\"" . $parent_url . "\",appFrame:$('#appFrame')});
+            $.composite.fn.addChild(\"" . $key . "\",\"" . $title . "\",\"" . $url . "\",\"" . $css . "\");
+          });
+          </script>
+          <div id='appFrame' class='appFrame'>
+          </div>
+          <div id='dialog-message' class='dialog-message'>
+            <!-- Dialog Contents -->
+          </div>    
+          ";
+    
+    return $output;
+    
+  }

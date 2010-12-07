@@ -1,0 +1,42 @@
+<?php
+// $Id: apps_sdk.install,v 0.1 2010/11/26 23:51:34 ccunningham Exp $
+
+/**
+ * @file
+ * App SDK module's install and uninstall code.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function apps_sdk_install() {
+  drupal_install_schema('apps_sdk');
+  db_query("INSERT INTO {apps_apps} (appkey, name, url, css, status) VALUES ('GOOGLE', 'Google', 'http://www.google.com', '', 1)");
+  db_query("INSERT INTO {apps_apps} (appkey, name, url, css, status) VALUES ('CLIFTON.CUNNINGHAM.EXAMPLE', 'Example 1', 'http://cliftoncunningham.co.uk/ws/child.html', 'http://cliftoncunningham.co.uk/ws/style.css', 1)");
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function apps_sdk_uninstall() {
+  drupal_uninstall_schema('apps_sdk');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function apps_sdk_schema() {
+  $schema['apps_apps'] = array(
+    'fields' => array(
+      'appid'  => array('type' => 'serial', 'unsigned' => TRUE, 'not null' => TRUE),
+      'appkey' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''),
+      'name'   => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''),
+      'url'    => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''),
+      'css'    => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''),
+      'status' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 1),
+    ),
+    'primary key' => array('appid'),
+  );
+
+  return $schema;
+}

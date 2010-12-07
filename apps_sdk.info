@@ -1,0 +1,7 @@
+; $Id: apps_sdk.info,v 0.1.0.0 2010/11/26 $
+name = Apps SDK
+description = Adds the ability to create facebook style apps, integrated via an iFrame and a javascript SDK.
+package = Apps
+core = 6.x
+version = "6.x-1.x-dev"
+project = "apps"
